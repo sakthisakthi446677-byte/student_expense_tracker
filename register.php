@@ -5,9 +5,9 @@ if(isset($_SESSION['user_id'])){ header('Location: dashboard.php'); exit; }
 
 $error='';
 if($_SERVER['REQUEST_METHOD']=='POST'){
-  $name = trim($_POST['name']);
-  $email = trim(strtolower($_POST['email']));
-  $pass = $_POST['password'];
+  $name = trim($_POST['name'] ?? '');
+  $email = trim(strtolower($_POST['email'] ?? ''));
+  $pass = $_POST['password'] ?? '';
   
   if(!$name || !$email || !$pass){
     $error = "Please fill in all fields.";
@@ -21,10 +21,31 @@ if($_SERVER['REQUEST_METHOD']=='POST'){
             $error = "An account with this email already exists.";
         } else {
             $hash = password_hash($pass, PASSWORD_DEFAULT);
+            
+            // AUTO FIX DB STRUCTURE
+            try { $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255)"); } catch(Exception $e){}
+            try { $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(255)"); } catch(Exception $e){}
+            try { $pdo->exec("ALTER TABLE users MODIFY full_name VARCHAR(255) NULL"); } catch(Exception $e){}
+            try { $pdo->exec("ALTER TABLE users MODIFY username VARCHAR(255) NULL"); } catch(Exception $e){}
             try { $pdo->exec("ALTER TABLE users MODIFY password VARCHAR(255)"); } catch(Exception $e){}
-            $stmt = $pdo->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
-            $stmt->execute([$name, $email, $hash]);
+
+            // FIXED INSERT - supports both full_name and username
+            try {
+                $stmt = $pdo->prepare("INSERT INTO users (full_name, username, email, password) VALUES (?, ?, ?, ?)");
+                $stmt->execute([$name, $name, $email, $hash]);
+            } catch(Exception $e) {
+                // Fallback if one column missing
+                try {
+                    $stmt = $pdo->prepare("INSERT INTO users (full_name, email, password) VALUES (?, ?, ?)");
+                    $stmt->execute([$name, $email, $hash]);
+                } catch(Exception $e2) {
+                    $stmt = $pdo->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
+                    $stmt->execute([$name, $email, $hash]);
+                }
+            }
+            
             try { $pdo->prepare("INSERT INTO expense_users (name, email, password) VALUES (?, ?, ?)")->execute([$name, $email, $hash]); } catch(Exception $e){}
+            
             header('Location: login.php?msg=registered'); exit;
         }
     } catch(Exception $e){
@@ -94,7 +115,7 @@ body{background:#0a1413;min-height:100vh;display:flex;color:#e6f0ef}
 
     <form method="POST" autocomplete="off">
       <label class="lab">Full Name</label>
-      <input class="inp" type="text" name="name" required placeholder="e.g. Jackson Durai" value="<?= htmlspecialchars($_POST['name']??'')?>">
+      <input class="inp" type="text" name="name" required placeholder="e.g. your name" value="<?= htmlspecialchars($_POST['name']??'')?>">
       
       <label class="lab">Email Address</label>
       <input class="inp" type="email" name="email" required placeholder="you@college.edu" value="<?= htmlspecialchars($_POST['email']??'')?>">

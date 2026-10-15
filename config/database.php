@@ -3,8 +3,8 @@ if (!defined('BASE_URL')) {
     $h = $_SERVER['HTTP_HOST'] ?? '';
     define('BASE_URL', str_contains($h, '5300.') ? '/proxy/' . ($_SERVER['SERVER_PORT'] ?? '8080') : '');
 }
-$DB_HOST = 'db01.dbhost.dev'; $DB_PORT = '5051'; $DB_NAME = 'db_4559wx7c3';
-$DB_USER = 'user_4559wx7c3'; $DB_PASS = 'p4559wx7c3';
+$DB_HOST = 'db01.dbhost.dev'; $DB_PORT = '5051'; $DB_NAME = 'db_45686cjt5';
+$DB_USER = 'user_45686cjt5'; $DB_PASS = 'p45686cjt5';
 $pdo = null;
 try {
     $pdo = new PDO("mysql:host=$DB_HOST;port=$DB_PORT;dbname=$DB_NAME;charset=utf8mb4", $DB_USER, $DB_PASS, [
